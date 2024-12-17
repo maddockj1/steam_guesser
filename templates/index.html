@@ -1,0 +1,438 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Steam Player Count Game</title>
+    <link rel="stylesheet" type="text/css" href="{{ url_for('static', filename='css/game.css') }}">
+</head>
+<body>
+    <div class="game-container">
+        <!-- Player Setup Section -->
+        <div class="player-setup" id="player-setup">
+            <div class="game-info">
+                <h2>Player Setup (2-5 players)</h2>
+            </div>
+            <div class="player-list" id="player-list">
+                <div class="guess-input">
+                    <input type="text" placeholder="Player 1 name" class="player-name">
+                </div>
+                <div class="guess-input">
+                    <input type="text" placeholder="Player 2 name" class="player-name">
+                </div>
+            </div>
+            <div class="button-group">
+                <button onclick="addPlayer()">Add Player</button>
+                <button id="start-button" onclick="startGame()">Start Game</button>
+            </div>
+        </div>
+
+        <!-- Game Screen Section -->
+        <div id="game-screen" style="display: none;">
+            <div class="game-info">
+                <h2 id="game-name">Loading...</h2>
+                <p>Current Player: <span id="current-player-turn" class="current-player"></span></p>
+            </div>
+
+            <div class="guess-inputs">
+                <div class="guess-input">
+                    <label for="rank-guess">Guess the Rank (1-50):</label>
+                    <input type="number" id="rank-guess" min="1" max="50">
+                </div>
+                <div class="guess-input">
+                    <label for="players-guess">Guess the Player Count:</label>
+                    <input type="number" id="players-guess" min="0">
+                </div>
+                <button onclick="makeGuess()">Submit Guess</button>
+            </div>
+
+            <div id="previous-result" style="display: none;" class="result-container">
+                <!-- Results will be inserted here by JavaScript -->
+            </div>
+
+            <div class="scoreboard">
+                <h3>Scoreboard</h3>
+                <div id="scores" class="scores-container">
+                    <!-- Player scores will be inserted here by JavaScript -->
+                </div>
+                <div class="round-counter">
+                    Round: <span id="current-round">1</span>/5
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Game Over Modal -->
+    <div id="game-over-modal" class="modal">
+        <div class="modal-content">
+            <div id="game-over-content">
+                <!-- Content will be inserted here by JavaScript -->
+            </div>
+        </div>
+    </div>
+
+    <div class="rankings-container">
+        <div class="rankings">
+            <h3>Player Rankings</h3>
+            <div class="ranking-tabs">
+                <button class="tab-button active" onclick="showRanking('points')">Points</button>
+                <button class="tab-button" onclick="showRanking('accuracy')">Accuracy</button>
+            </div>
+            <div class="table-container">
+                <table class="rankings-table" id="rankings-table">
+                    <thead>
+                        <tr>
+                            <th>Rank</th>
+                            <th>Player</th>
+                            <th id="ranking-stat">Points</th>
+                            <th>Accuracy</th>
+                        </tr>
+                    </thead>
+                    <tbody id="rankings-body">
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let gameData = null;
+        let isLoading = false;
+        let players = [];
+        let currentPlayerIndex = 0;
+        let currentRound = 1;
+        let currentGame = null;
+        let canGuess = false;
+
+        async function preloadGameData() {
+            try {
+                console.log('Preloading game data...');
+                document.getElementById('start-button').textContent = 'Loading...';
+                isLoading = true;
+
+                const response = await fetch('/api/get-game-pair');
+                console.log('API response received:', response.status);
+                
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                
+                gameData = await response.json();
+                console.log('Game data loaded:', gameData);
+                
+                if (gameData.error) {
+                    throw new Error(gameData.error);
+                }
+
+                document.getElementById('start-button').textContent = 'Start Game';
+                isLoading = false;
+                
+            } catch (error) {
+                console.error('Error loading game data:', error);
+                document.getElementById('start-button').textContent = 'Start Game';
+                isLoading = false;
+            }
+        }
+
+        function initializePlayers() {
+            console.log('Initializing players...');
+            const playerInputs = document.querySelectorAll('.player-name');
+            players = Array.from(playerInputs)
+                .map(input => ({
+                    name: input.value.trim() || input.placeholder,
+                    score: 0,
+                    guesses: [],
+                    totalAccuracy: 0,
+                    gamesPlayed: 0
+                }))
+                .filter(player => player.name);
+            console.log('Players initialized:', players);
+        }
+
+        function startGame() {
+            console.log('Start game clicked');
+            if (isLoading) {
+                console.log('Still loading data, please wait...');
+                return;
+            }
+
+            initializePlayers();
+            if (players.length < 2) {
+                alert('Please add at least 2 players!');
+                return;
+            }
+
+            console.log('Starting game with players:', players);
+            document.getElementById('player-setup').style.display = 'none';
+            document.getElementById('game-screen').style.display = 'block';
+            
+            currentPlayerIndex = 0;
+            currentRound = 1;
+            updateScoreboard();
+            loadNewGame();
+        }
+
+        async function loadNewGame() {
+            console.log('Loading new game...');
+            document.getElementById('rank-guess').value = '';
+            document.getElementById('players-guess').value = '';
+            
+            if (currentPlayerIndex === 0) {  // Only load new game at start of round
+                try {
+                    const response = await fetch('/api/get-game-pair');
+                    if (!response.ok) {
+                        throw new Error(`HTTP error! status: ${response.status}`);
+                    }
+                    currentGame = await response.json();
+                    console.log('New game loaded for round:', currentRound);
+                    
+                    if (currentGame.error) {
+                        throw new Error(currentGame.error);
+                    }
+                } catch (error) {
+                    console.error('Error loading game:', error);
+                    return;
+                }
+            }
+            
+            document.getElementById('game-name').textContent = currentGame.game.name;
+            document.getElementById('current-player-turn').textContent = players[currentPlayerIndex].name;
+            document.getElementById('previous-result').style.display = 'none';
+            canGuess = true;
+        }
+
+        document.addEventListener('DOMContentLoaded', () => {
+            console.log('Page loaded, preloading game data');
+            preloadGameData();
+        });
+
+        function updateScoreboard() {
+            console.log('Updating scoreboard');
+            const scoresDiv = document.getElementById('scores');
+            scoresDiv.innerHTML = '';
+            
+            players.forEach((player, index) => {
+                const playerScore = document.createElement('div');
+                playerScore.classList.add('player-score');
+                
+                const accuracy = player.gamesPlayed > 0 
+                    ? (player.totalAccuracy / player.gamesPlayed).toFixed(1) 
+                    : '0.0';
+                
+                playerScore.innerHTML = `
+                    <span class="player-name ${index === currentPlayerIndex ? 'current-player' : ''}">
+                        ${player.name}
+                    </span>
+                    <span class="score">Score: ${player.score}</span>
+                    <span class="accuracy">Accuracy: ${accuracy}%</span>
+                `;
+                
+                scoresDiv.appendChild(playerScore);
+            });
+            
+            document.getElementById('current-round').textContent = currentRound;
+        }
+
+        function calculateAccuracy(rankGuess, playersGuess) {
+            const actualRank = currentGame.game.rank;
+            const actualPlayers = currentGame.game.players;
+            
+            const rankDiff = Math.abs(rankGuess - actualRank);
+            const rankAccuracy = Math.max(0, 50 - (rankDiff * 10));
+            
+            const playersDiff = Math.abs(playersGuess - actualPlayers);
+            const playersAccuracy = Math.max(0, 50 - (playersDiff / actualPlayers * 50));
+            
+            return {
+                rankAccuracy,
+                playersAccuracy,
+                totalAccuracy: rankAccuracy + playersAccuracy
+            };
+        }
+
+        function makeGuess() {
+            if (!canGuess) return;
+            
+            const rankGuess = parseInt(document.getElementById('rank-guess').value);
+            const playersGuess = parseInt(document.getElementById('players-guess').value);
+            
+            if (isNaN(rankGuess) || isNaN(playersGuess) || 
+                rankGuess < 1 || rankGuess > 50 || 
+                playersGuess < 0) {
+                alert('Please enter valid guesses!');
+                return;
+            }
+            
+            canGuess = false;
+            const accuracy = calculateAccuracy(rankGuess, playersGuess);
+            
+            // Store the guess for this player
+            const currentPlayer = players[currentPlayerIndex];
+            currentPlayer.currentGuess = {
+                rankGuess,
+                playersGuess,
+                accuracy: accuracy.totalAccuracy
+            };
+            
+            // Move to next player
+            currentPlayerIndex++;
+            
+            // If all players have guessed, show results and prepare next round
+            if (currentPlayerIndex >= players.length) {
+                showRoundResults();
+            } else {
+                // Continue to next player
+                loadNewGame();
+            }
+        }
+
+        function showRoundResults() {
+            const resultDiv = document.getElementById('previous-result');
+            resultDiv.style.display = 'block';
+            
+            // Sort players by accuracy for this round
+            const roundRankings = [...players]
+                .sort((a, b) => (b.currentGuess?.accuracy || 0) - (a.currentGuess?.accuracy || 0));
+            
+            // Show all players' guesses and scores
+            resultDiv.innerHTML = `
+                <h3>Round ${currentRound} Results</h3>
+                <p>Game: ${currentGame.game.name}</p>
+                <p>Actual Rank: ${currentGame.game.rank}</p>
+                <p>Actual Players: ${currentGame.game.players.toLocaleString()}</p>
+                <div class="round-results">
+                    ${roundRankings.map((player, index) => `
+                        <div class="player-result ${index === 0 ? 'best-guess' : ''}">
+                            <span class="player-name">${player.name}</span>
+                            <span>Rank Guess: ${player.currentGuess.rankGuess}</span>
+                            <span>Players Guess: ${player.currentGuess.playersGuess.toLocaleString()}</span>
+                            <span>Points: +${Math.round(player.currentGuess.accuracy)}</span>
+                        </div>
+                    `).join('')}
+                </div>
+            `;
+            
+            // Update scores
+            players.forEach(player => {
+                player.score += Math.round(player.currentGuess.accuracy);
+                player.totalAccuracy += player.currentGuess.accuracy;
+                player.gamesPlayed += 1;
+            });
+            
+            // Reset for next round
+            currentPlayerIndex = 0;
+            currentRound++;
+            
+            updateScoreboard();
+            
+            // Check if game is over
+            if (currentRound > 5) {
+                setTimeout(endGame, 3000);
+            } else {
+                setTimeout(() => {
+                    resultDiv.style.display = 'none';
+                    loadNewGame();
+                }, 5000);
+            }
+        }
+
+        function endGame() {
+            const winner = players.reduce((prev, current) => 
+                (current.score > prev.score) ? current : prev
+            );
+            
+            document.getElementById('game-screen').innerHTML = `
+                <h2>Game Over!</h2>
+                <h3>Winner: ${winner.name}</h3>
+                <div class="final-scores">
+                    ${players.map(player => `
+                        <div class="final-score">
+                            <span class="player-name">${player.name}</span>
+                            <span class="score">Score: ${player.score}</span>
+                            <span class="accuracy">
+                                Accuracy: ${(player.totalAccuracy / player.gamesPlayed).toFixed(1)}%
+                            </span>
+                        </div>
+                    `).join('')}
+                </div>
+                <button onclick="location.reload()">Play Again</button>
+            `;
+        }
+
+        function addPlayer() {
+            const playerList = document.getElementById('player-list');
+            const playerCount = playerList.children.length;
+            
+            // Limit to 5 players
+            if (playerCount >= 5) {
+                alert('Maximum 5 players allowed!');
+                return;
+            }
+            
+            const newPlayerDiv = document.createElement('div');
+            newPlayerDiv.className = 'guess-input';
+            newPlayerDiv.innerHTML = `
+                <div class="player-input-group">
+                    <input type="text" placeholder="Player ${playerCount + 1} name" class="player-name">
+                    <button class="remove-player" onclick="removePlayer(this)">×</button>
+                </div>
+            `;
+            
+            playerList.appendChild(newPlayerDiv);
+            updateStartButton();
+        }
+
+        function removePlayer(button) {
+            const playerInput = button.closest('.guess-input');
+            const playerList = document.getElementById('player-list');
+            
+            // Don't remove if only 2 players left
+            if (playerList.children.length <= 2) {
+                alert('Minimum 2 players required!');
+                return;
+            }
+            
+            playerInput.remove();
+            updateStartButton();
+            
+            // Update remaining player numbers
+            const inputs = playerList.getElementsByClassName('player-name');
+            for (let i = 0; i < inputs.length; i++) {
+                inputs[i].placeholder = `Player ${i + 1} name`;
+            }
+        }
+
+        function updateStartButton() {
+            const playerInputs = document.querySelectorAll('.player-name');
+            const startButton = document.getElementById('start-button');
+            const validPlayers = Array.from(playerInputs)
+                .filter(input => input.value.trim().length > 0);
+            
+            startButton.disabled = validPlayers.length < 2;
+            startButton.title = validPlayers.length < 2 ? 
+                'Need at least 2 players to start' : 'Start the game';
+        }
+    </script>
+
+    <style>
+        .round-results {
+            margin-top: 15px;
+        }
+        
+        .player-result {
+            padding: 10px;
+            margin: 5px 0;
+            background-color: white;
+            border-radius: 4px;
+            display: flex;
+            justify-content: space-between;
+            gap: 10px;
+        }
+        
+        .best-guess {
+            background-color: #e3f2fd;
+            border: 1px solid #90caf9;
+        }
+    </style>
+</body>
+</html> 

@@ -1,0 +1,319 @@
+body {
+    background-color: #f0f0f0 !important;
+    padding: 20px;
+    font-family: Arial, sans-serif;
+}
+
+h2 {
+    color: #007bff !important;
+}
+
+.game-container {
+    max-width: 800px !important;
+    margin: 0 auto !important;
+    padding: 20px !important;
+    background-color: white !important;
+    border-radius: 8px !important;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1) !important;
+}
+
+.game-info {
+    text-align: center;
+    margin-bottom: 30px;
+}
+
+.game-info h2 {
+    color: #007bff;
+    margin-bottom: 15px;
+}
+
+.player-list {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    margin-bottom: 20px;
+}
+
+.guess-inputs {
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+    margin-bottom: 30px;
+}
+
+.guess-input {
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+}
+
+.guess-input input {
+    padding: 8px;
+    font-size: 16px;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+}
+
+.button-group {
+    display: flex;
+    gap: 10px;
+    justify-content: center;
+    margin-top: 20px;
+}
+
+button {
+    padding: 10px 20px;
+    font-size: 16px;
+    background-color: #007bff;
+    color: white;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: background-color 0.2s;
+}
+
+button:hover {
+    background-color: #0056b3;
+}
+
+.result-container {
+    background-color: #f8f9fa;
+    border-radius: 8px;
+    padding: 20px;
+    margin: 20px 0;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.scoreboard {
+    margin: 30px auto;
+    padding: 20px;
+    background-color: #f8f9fa;
+    border-radius: 8px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    max-width: 600px;
+    text-align: center;
+}
+
+.scoreboard h3 {
+    color: #007bff;
+    margin-bottom: 20px;
+}
+
+.scores-container {
+    margin: 15px auto;
+    max-width: 500px;
+}
+
+.player-score {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin: 10px 0;
+    padding: 10px 20px;
+    background-color: white;
+    border-radius: 4px;
+    transition: background-color 0.2s;
+}
+
+.player-score:hover {
+    background-color: #f0f0f0;
+}
+
+.player-score .player-name {
+    flex: 1;
+    text-align: left;
+    padding-right: 10px;
+}
+
+.player-score .score,
+.player-score .accuracy {
+    padding: 0 10px;
+    min-width: 100px;
+    text-align: right;
+}
+
+.player-score .current-player {
+    color: #007bff;
+    font-weight: bold;
+    position: relative;
+}
+
+.player-score .current-player::before {
+    content: "►";
+    position: absolute;
+    left: -20px;
+    color: #007bff;
+}
+
+.round-counter {
+    text-align: center;
+    margin-top: 15px;
+    font-weight: bold;
+    color: #666;
+}
+
+.final-scores {
+    margin: 20px 0;
+}
+
+.final-score {
+    margin: 10px 0;
+    padding: 15px;
+    background: white;
+    border-radius: 5px;
+    display: flex;
+    justify-content: space-between;
+}
+
+.player-name {
+    padding: 8px;
+    font-size: 16px;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    width: 100%;
+}
+
+/* Add these modal styles to your CSS file */
+.modal {
+    display: none;
+    position: fixed;
+    z-index: 1000;
+    left: 0;
+    top: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.5);
+    backdrop-filter: blur(5px);
+}
+
+.modal-content {
+    background-color: white;
+    margin: 15% auto;
+    padding: 30px;
+    border-radius: 8px;
+    max-width: 600px;
+    position: relative;
+    animation: modalSlideIn 0.3s ease-out;
+}
+
+@keyframes modalSlideIn {
+    from {
+        transform: translateY(-100px);
+        opacity: 0;
+    }
+    to {
+        transform: translateY(0);
+        opacity: 1;
+    }
+}
+
+.modal-content h2 {
+    margin-top: 0;
+    color: #007bff;
+}
+
+.modal-content button {
+    margin-top: 20px;
+    width: 100%;
+}
+
+/* Rankings styles */
+.rankings-container {
+    margin: 30px auto;
+    max-width: 600px;
+    background-color: #f8f9fa;
+    border-radius: 8px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    padding: 20px;
+}
+
+.rankings h3 {
+    color: #007bff;
+    text-align: center;
+    margin-bottom: 20px;
+}
+
+.ranking-tabs {
+    display: flex;
+    justify-content: center;
+    gap: 10px;
+    margin-bottom: 20px;
+}
+
+.tab-button {
+    padding: 8px 16px;
+    border: none;
+    border-radius: 4px;
+    background-color: #e9ecef;
+    color: #495057;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.tab-button:hover {
+    background-color: #dee2e6;
+}
+
+.tab-button.active {
+    background-color: #007bff;
+    color: white;
+}
+
+.table-container {
+    overflow-x: auto;
+}
+
+.rankings-table {
+    width: 100%;
+    border-collapse: collapse;
+    background-color: white;
+    border-radius: 4px;
+    overflow: hidden;
+}
+
+.rankings-table th,
+.rankings-table td {
+    padding: 12px;
+    text-align: left;
+    border-bottom: 1px solid #dee2e6;
+}
+
+.rankings-table th {
+    background-color: #f8f9fa;
+    font-weight: bold;
+    color: #495057;
+}
+
+.rankings-table tr:last-child td {
+    border-bottom: none;
+}
+
+.rankings-table tbody tr:hover {
+    background-color: #f8f9fa;
+}
+
+.rankings-table td:first-child,
+.rankings-table th:first-child {
+    padding-left: 20px;
+}
+
+.rankings-table td:last-child,
+.rankings-table th:last-child {
+    padding-right: 20px;
+}
+
+/* Add medal colors for top 3 */
+.rankings-table tbody tr:nth-child(1) td:first-child {
+    color: gold;
+    font-weight: bold;
+}
+
+.rankings-table tbody tr:nth-child(2) td:first-child {
+    color: silver;
+    font-weight: bold;
+}
+
+.rankings-table tbody tr:nth-child(3) td:first-child {
+    color: #cd7f32; /* bronze */
+    font-weight: bold;
+} 
