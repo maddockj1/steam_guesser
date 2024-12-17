@@ -19,7 +19,8 @@ h2 {
 
 .game-info {
     text-align: center;
-    margin-bottom: 30px;
+    width: 100%;
+    margin-bottom: 20px;
 }
 
 .game-info h2 {
@@ -30,8 +31,10 @@ h2 {
 .player-list {
     display: flex;
     flex-direction: column;
+    margin: 20px auto;
     gap: 10px;
-    margin-bottom: 20px;
+    max-width: 300px;
+    padding: 0 50px;
 }
 
 .guess-inputs {
@@ -42,9 +45,9 @@ h2 {
 }
 
 .guess-input {
+    width: 100%;
     display: flex;
-    flex-direction: column;
-    gap: 5px;
+    justify-content: flex-start;
 }
 
 .guess-input input {
@@ -59,6 +62,7 @@ h2 {
     gap: 10px;
     justify-content: center;
     margin-top: 20px;
+    text-align: center;
 }
 
 button {
@@ -166,11 +170,11 @@ button:hover {
 }
 
 .player-name {
+    width: 200px;
     padding: 8px;
-    font-size: 16px;
     border: 1px solid #ccc;
     border-radius: 4px;
-    width: 100%;
+    text-align: center;
 }
 
 /* Add these modal styles to your CSS file */
@@ -316,4 +320,108 @@ button:hover {
 .rankings-table tbody tr:nth-child(3) td:first-child {
     color: #cd7f32; /* bronze */
     font-weight: bold;
+}
+
+.round-results {
+    margin-top: 15px;
+}
+
+.player-result {
+    padding: 10px;
+    margin: 5px 0;
+    background-color: white;
+    border-radius: 4px;
+    display: flex;
+    justify-content: space-between;
+    gap: 10px;
+}
+
+.best-guess {
+    background-color: #e3f2fd;
+    border: 1px solid #90caf9;
+}
+
+.player-setup {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    width: 100%;
+}
+
+.player-input-group {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    width: 100%;
+}
+
+.remove-player {
+    padding: 8px 12px;
+    border: none;
+    border-radius: 50%;
+    background-color: #ff4444;
+    color: white;
+    cursor: pointer;
+}
+
+.remove-player:hover {
+    background-color: #cc0000;
+}
+
+.next-round-button {
+    margin-top: 20px;
+    padding: 10px 20px;
+    background-color: #4CAF50;
+    color: white;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 16px;
+    display: block;
+    margin-left: auto;
+    margin-right: auto;
+}
+
+.next-round-button:hover {
+    background-color: #45a049;
+}
+
+.rules-section {
+    max-width: 600px;
+    margin: 0 auto 30px auto;
+    padding: 20px;
+    background-color: #f8f9fa;
+    border-radius: 8px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.rules-section h3 {
+    color: #2c3e50;
+    margin-bottom: 15px;
+    text-align: center;
+}
+
+.rules-content {
+    font-size: 14px;
+    line-height: 1.6;
+    color: #34495e;
+}
+
+.rules-content p {
+    margin: 12px 0 8px 0;
+    font-weight: bold;
+}
+
+.rules-content ul {
+    margin: 0 0 15px 0;
+    padding-left: 20px;
+}
+
+.rules-content ul ul {
+    margin: 5px 0;
+    color: #576574;
+}
+
+.rules-content li {
+    margin-bottom: 5px;
 } 

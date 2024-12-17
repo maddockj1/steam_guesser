@@ -13,6 +13,41 @@
             <div class="game-info">
                 <h2>Player Setup (2-5 players)</h2>
             </div>
+            
+            <div class="rules-section">
+                <h3>How to Play</h3>
+                <div class="rules-content">
+                    <p>Each round, players will guess:</p>
+                    <ul>
+                        <li>The game's rank (1-50) among Steam's most played games</li>
+                        <li>The current number of active players</li>
+                    </ul>
+                    
+                    <p>Scoring System:</p>
+                    <ul>
+                        <li>Rank Guess: Up to 50 points
+                            <ul>
+                                <li>Lose 10 points for each rank off</li>
+                                <li>Example: If actual rank is 5, guessing 7 = 30 points</li>
+                            </ul>
+                        </li>
+                        <li>Player Count Guess: Up to 50 points
+                            <ul>
+                                <li>Points decrease based on percentage difference</li>
+                                <li>The closer your guess, the more points you earn</li>
+                            </ul>
+                        </li>
+                    </ul>
+                    
+                    <p>Game Format:</p>
+                    <ul>
+                        <li>5 rounds total</li>
+                        <li>Different game each round</li>
+                        <li>Highest total score wins!</li>
+                    </ul>
+                </div>
+            </div>
+
             <div class="player-list" id="player-list">
                 <div class="guess-input">
                     <input type="text" placeholder="Player 1 name" class="player-name">
@@ -310,6 +345,7 @@
                         </div>
                     `).join('')}
                 </div>
+                ${currentRound < 5 ? '<button id="next-round-button" onclick="startNextRound()" class="next-round-button">Next Round</button>' : ''}
             `;
             
             // Update scores
@@ -319,21 +355,20 @@
                 player.gamesPlayed += 1;
             });
             
-            // Reset for next round
-            currentPlayerIndex = 0;
-            currentRound++;
-            
             updateScoreboard();
             
             // Check if game is over
             if (currentRound > 5) {
                 setTimeout(endGame, 3000);
-            } else {
-                setTimeout(() => {
-                    resultDiv.style.display = 'none';
-                    loadNewGame();
-                }, 5000);
             }
+        }
+
+        function startNextRound() {
+            const resultDiv = document.getElementById('previous-result');
+            resultDiv.style.display = 'none';
+            currentPlayerIndex = 0;
+            currentRound++;
+            loadNewGame();
         }
 
         function endGame() {
@@ -413,26 +448,5 @@
                 'Need at least 2 players to start' : 'Start the game';
         }
     </script>
-
-    <style>
-        .round-results {
-            margin-top: 15px;
-        }
-        
-        .player-result {
-            padding: 10px;
-            margin: 5px 0;
-            background-color: white;
-            border-radius: 4px;
-            display: flex;
-            justify-content: space-between;
-            gap: 10px;
-        }
-        
-        .best-guess {
-            background-color: #e3f2fd;
-            border: 1px solid #90caf9;
-        }
-    </style>
 </body>
 </html> 
