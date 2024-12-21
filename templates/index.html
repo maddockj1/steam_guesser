@@ -17,26 +17,18 @@
             <div class="rules-section">
                 <h3>How to Play</h3>
                 <div class="rules-content">
-                    <p>Each round, players will guess:</p>
+                    <p>Round 1:</p>
                     <ul>
-                        <li>The game's rank (1-50) among Steam's most played games</li>
-                        <li>The current number of active players</li>
+                        <li>Guess the current number of active players</li>
+                        <li>Points based on how close your guess is to actual count</li>
                     </ul>
                     
-                    <p>Scoring System:</p>
+                    <p>Rounds 2-5:</p>
                     <ul>
-                        <li>Rank Guess: Up to 50 points
-                            <ul>
-                                <li>Lose 10 points for each rank off</li>
-                                <li>Example: If actual rank is 5, guessing 7 = 30 points</li>
-                            </ul>
-                        </li>
-                        <li>Player Count Guess: Up to 50 points
-                            <ul>
-                                <li>Points decrease based on percentage difference</li>
-                                <li>The closer your guess, the more points you earn</li>
-                            </ul>
-                        </li>
+                        <li>First, guess if the new game has MORE or LESS players than the previous game</li>
+                        <li>Then, guess the exact player count</li>
+                        <li>50 points for correct higher/lower guess</li>
+                        <li>5 bonus points for closest player count guess</li>
                     </ul>
                     
                     <p>Game Format:</p>
@@ -65,20 +57,45 @@
         <!-- Game Screen Section -->
         <div id="game-screen" style="display: none;">
             <div class="game-info">
-                <h2 id="game-name">Loading...</h2>
-                <p>Current Player: <span id="current-player-turn" class="current-player"></span></p>
+                <div class="game-title-container">
+                    <h2 id="game-name">Loading...</h2>
+                </div>
+                <div class="current-player-container">
+                    <div class="current-player-banner">
+                        <div class="player-turn-label">CURRENT PLAYER</div>
+                        <div id="current-player-turn" class="player-name-display"></div>
+                    </div>
+                </div>
+            </div>
+
+            <div id="winner-banner" class="winner-banner" style="display: none;">
+                <div class="winner-content">
+                    <h2>🏆 WINNER! 🏆</h2>
+                    <h3 id="winner-name"></h3>
+                    <p>Final Score: <span id="winner-score"></span></p>
+                </div>
             </div>
 
             <div class="guess-inputs">
-                <div class="guess-input">
-                    <label for="rank-guess">Guess the Rank (1-50):</label>
-                    <input type="number" id="rank-guess" min="1" max="50">
-                </div>
-                <div class="guess-input">
+                <div id="first-round-input" class="guess-input">
                     <label for="players-guess">Guess the Player Count:</label>
                     <input type="number" id="players-guess" min="0">
+                    <button onclick="makeGuess()" class="submit-button">Submit Guess</button>
                 </div>
-                <button onclick="makeGuess()">Submit Guess</button>
+                
+                <div id="higher-lower-input" class="guess-input" style="display: none;">
+                    <p>Previous Game: <span id="previous-game-info"></span></p>
+                    <p>Players: <span id="previous-player-count"></span></p>
+                    <div class="higher-lower-buttons">
+                        <button onclick="makeHigherLowerGuess('higher')" class="guess-button">Higher</button>
+                        <button onclick="makeHigherLowerGuess('lower')" class="guess-button">Lower</button>
+                    </div>
+                    <div id="player-count-after-hl" style="display: none;">
+                        <label for="players-guess-hl">Now guess the player count:</label>
+                        <input type="number" id="players-guess-hl" min="0">
+                        <button onclick="makePlayerCountGuess()" class="submit-button">Submit Count Guess</button>
+                    </div>
+                </div>
             </div>
 
             <div id="previous-result" style="display: none;" class="result-container">
@@ -87,12 +104,17 @@
 
             <div class="scoreboard">
                 <h3>Scoreboard</h3>
-                <div id="scores" class="scores-container">
-                    <!-- Player scores will be inserted here by JavaScript -->
-                </div>
-                <div class="round-counter">
-                    Round: <span id="current-round">1</span>/5
-                </div>
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Rank</th>
+                            <th>Player</th>
+                            <th>Points</th>
+                        </tr>
+                    </thead>
+                    <tbody id="scoreboard-body">
+                    </tbody>
+                </table>
             </div>
         </div>
     </div>
@@ -106,30 +128,6 @@
         </div>
     </div>
 
-    <div class="rankings-container">
-        <div class="rankings">
-            <h3>Player Rankings</h3>
-            <div class="ranking-tabs">
-                <button class="tab-button active" onclick="showRanking('points')">Points</button>
-                <button class="tab-button" onclick="showRanking('accuracy')">Accuracy</button>
-            </div>
-            <div class="table-container">
-                <table class="rankings-table" id="rankings-table">
-                    <thead>
-                        <tr>
-                            <th>Rank</th>
-                            <th>Player</th>
-                            <th id="ranking-stat">Points</th>
-                            <th>Accuracy</th>
-                        </tr>
-                    </thead>
-                    <tbody id="rankings-body">
-                    </tbody>
-                </table>
-            </div>
-        </div>
-    </div>
-
     <script>
         let gameData = null;
         let isLoading = false;
@@ -138,6 +136,10 @@
         let currentRound = 1;
         let currentGame = null;
         let canGuess = false;
+        let previousGamePlayers = null;
+        let currentHigherLowerGuess = null;
+        let usedGameIds = new Set();
+        let previousGame = null;
 
         async function preloadGameData() {
             try {
@@ -197,6 +199,9 @@
                 return;
             }
 
+            // Reset used games
+            usedGameIds.clear();
+            
             console.log('Starting game with players:', players);
             document.getElementById('player-setup').style.display = 'none';
             document.getElementById('game-screen').style.display = 'block';
@@ -209,17 +214,48 @@
 
         async function loadNewGame() {
             console.log('Loading new game...');
-            document.getElementById('rank-guess').value = '';
-            document.getElementById('players-guess').value = '';
+            
+            // Clear the player count guess input if it exists
+            const playersGuessInput = document.getElementById('players-guess');
+            if (playersGuessInput) {
+                playersGuessInput.value = '';
+            }
             
             if (currentPlayerIndex === 0) {  // Only load new game at start of round
                 try {
-                    const response = await fetch('/api/get-game-pair');
-                    if (!response.ok) {
-                        throw new Error(`HTTP error! status: ${response.status}`);
+                    let attempts = 0;
+                    let newGame = null;
+                    
+                    // Try up to 5 times to get a unique game
+                    while (attempts < 5) {
+                        const response = await fetch('/api/get-game-pair');
+                        if (!response.ok) {
+                            throw new Error(`HTTP error! status: ${response.status}`);
+                        }
+                        
+                        newGame = await response.json();
+                        console.log('Potential new game:', newGame);
+                        
+                        // Check if this game has been used before
+                        if (!usedGameIds.has(newGame.game.name)) {
+                            // Store current game as previous before updating
+                            if (currentGame) {
+                                previousGame = currentGame;
+                                previousGamePlayers = currentGame.game.players;
+                            }
+                            currentGame = newGame;
+                            usedGameIds.add(newGame.game.name);
+                            console.log('New unique game loaded for round:', currentRound);
+                            break;
+                        }
+                        
+                        attempts++;
+                        console.log('Game already used, trying again...');
                     }
-                    currentGame = await response.json();
-                    console.log('New game loaded for round:', currentRound);
+                    
+                    if (!currentGame) {
+                        throw new Error('Could not find a unique game after multiple attempts');
+                    }
                     
                     if (currentGame.error) {
                         throw new Error(currentGame.error);
@@ -233,6 +269,9 @@
             document.getElementById('game-name').textContent = currentGame.game.name;
             document.getElementById('current-player-turn').textContent = players[currentPlayerIndex].name;
             document.getElementById('previous-result').style.display = 'none';
+            
+            // Update display based on round number
+            updateGameDisplay();
             canGuess = true;
         }
 
@@ -242,30 +281,24 @@
         });
 
         function updateScoreboard() {
-            console.log('Updating scoreboard');
-            const scoresDiv = document.getElementById('scores');
-            scoresDiv.innerHTML = '';
+            const scoreboardBody = document.getElementById('scoreboard-body');
             
-            players.forEach((player, index) => {
-                const playerScore = document.createElement('div');
-                playerScore.classList.add('player-score');
-                
-                const accuracy = player.gamesPlayed > 0 
-                    ? (player.totalAccuracy / player.gamesPlayed).toFixed(1) 
-                    : '0.0';
-                
-                playerScore.innerHTML = `
-                    <span class="player-name ${index === currentPlayerIndex ? 'current-player' : ''}">
-                        ${player.name}
-                    </span>
-                    <span class="score">Score: ${player.score}</span>
-                    <span class="accuracy">Accuracy: ${accuracy}%</span>
+            // Sort players by score
+            const sortedPlayers = [...players].sort((a, b) => b.score - a.score);
+            
+            // Clear existing scoreboard
+            scoreboardBody.innerHTML = '';
+            
+            // Add each player to scoreboard
+            sortedPlayers.forEach((player, index) => {
+                const row = document.createElement('tr');
+                row.innerHTML = `
+                    <td>${index + 1}</td>
+                    <td>${player.name}</td>
+                    <td>${player.score}</td>
                 `;
-                
-                scoresDiv.appendChild(playerScore);
+                scoreboardBody.appendChild(row);
             });
-            
-            document.getElementById('current-round').textContent = currentRound;
         }
 
         function calculateAccuracy(rankGuess, playersGuess) {
@@ -285,39 +318,86 @@
             };
         }
 
-        function makeGuess() {
+        function makeHigherLowerGuess(guess) {
             if (!canGuess) return;
             
-            const rankGuess = parseInt(document.getElementById('rank-guess').value);
-            const playersGuess = parseInt(document.getElementById('players-guess').value);
+            currentHigherLowerGuess = guess;
+            document.getElementById('player-count-after-hl').style.display = 'block';
+            // Disable higher/lower buttons after guess
+            document.querySelectorAll('.guess-button').forEach(btn => btn.disabled = true);
+        }
+
+        function makePlayerCountGuess() {
+            if (!canGuess || currentHigherLowerGuess === null) return;
             
-            if (isNaN(rankGuess) || isNaN(playersGuess) || 
-                rankGuess < 1 || rankGuess > 50 || 
-                playersGuess < 0) {
-                alert('Please enter valid guesses!');
+            const playersGuess = parseInt(document.getElementById('players-guess-hl').value);
+            if (isNaN(playersGuess) || playersGuess < 0) {
+                alert('Please enter a valid player count!');
                 return;
             }
             
-            canGuess = false;
-            const accuracy = calculateAccuracy(rankGuess, playersGuess);
-            
-            // Store the guess for this player
             const currentPlayer = players[currentPlayerIndex];
+            const actualPlayers = currentGame.game.players;
+            
+            const isCorrectHL = (currentHigherLowerGuess === 'higher' && actualPlayers > previousGamePlayers) ||
+                               (currentHigherLowerGuess === 'lower' && actualPlayers < previousGamePlayers);
+            const hlPoints = isCorrectHL ? 5 : 0;
+            
             currentPlayer.currentGuess = {
-                rankGuess,
-                playersGuess,
-                accuracy: accuracy.totalAccuracy
+                higherLower: currentHigherLowerGuess,
+                playersGuess: playersGuess,
+                hlPoints: hlPoints,
+                accuracy: hlPoints,
+                actualPlayers: actualPlayers,
+                difference: Math.abs(playersGuess - actualPlayers)
             };
             
-            // Move to next player
             currentPlayerIndex++;
-            
-            // If all players have guessed, show results and prepare next round
             if (currentPlayerIndex >= players.length) {
+                const sortedByAccuracy = [...players].sort((a, b) => 
+                    a.currentGuess.difference - b.currentGuess.difference
+                );
+                sortedByAccuracy[0].currentGuess.accuracy += 5;
                 showRoundResults();
             } else {
-                // Continue to next player
-                loadNewGame();
+                resetGuessInputs();
+                updateGameDisplay();
+                updateCurrentRoundGuesses();
+            }
+        }
+
+        function resetGuessInputs() {
+            // Clear all input fields
+            const firstRoundInput = document.getElementById('players-guess');
+            const higherLowerInput = document.getElementById('players-guess-hl');
+            
+            if (firstRoundInput) firstRoundInput.value = '';
+            if (higherLowerInput) higherLowerInput.value = '';
+            
+            // Reset higher/lower state
+            currentHigherLowerGuess = null;
+            document.getElementById('player-count-after-hl').style.display = 'none';
+            document.querySelectorAll('.guess-button').forEach(btn => btn.disabled = false);
+        }
+
+        function updateGameDisplay() {
+            if (currentRound === 1) {
+                document.getElementById('first-round-input').style.display = 'block';
+                document.getElementById('higher-lower-input').style.display = 'none';
+            } else {
+                document.getElementById('first-round-input').style.display = 'none';
+                document.getElementById('higher-lower-input').style.display = 'block';
+                document.getElementById('previous-game-info').textContent = previousGame.game.name;
+                document.getElementById('previous-player-count').textContent = previousGamePlayers.toLocaleString();
+            }
+            
+            // Add a visual indicator that this is the best guesser from last round
+            const currentPlayer = players[currentPlayerIndex];
+            const playerDisplay = document.getElementById('current-player-turn');
+            playerDisplay.textContent = currentPlayer.name;
+            
+            if (currentRound > 1 && currentPlayerIndex === 0) {
+                playerDisplay.innerHTML = `${currentPlayer.name} <span class="best-guesser">(Best Guess Last Round!)</span>`;
             }
         }
 
@@ -325,73 +405,144 @@
             const resultDiv = document.getElementById('previous-result');
             resultDiv.style.display = 'block';
             
-            // Sort players by accuracy for this round
-            const roundRankings = [...players]
-                .sort((a, b) => (b.currentGuess?.accuracy || 0) - (a.currentGuess?.accuracy || 0));
-            
-            // Show all players' guesses and scores
-            resultDiv.innerHTML = `
-                <h3>Round ${currentRound} Results</h3>
-                <p>Game: ${currentGame.game.name}</p>
-                <p>Actual Rank: ${currentGame.game.rank}</p>
-                <p>Actual Players: ${currentGame.game.players.toLocaleString()}</p>
-                <div class="round-results">
-                    ${roundRankings.map((player, index) => `
+            if (currentRound === 1) {
+                // Sort players by total points for this round
+                const roundRankings = [...players]
+                    .sort((a, b) => b.currentGuess.accuracy - a.currentGuess.accuracy);
+                
+                let resultsHTML = `
+                    <h3>Round ${currentRound} Results</h3>
+                    <p>Game: ${currentGame.game.name}</p>
+                    <p>Active Players: ${currentGame.game.players.toLocaleString()}</p>
+                    <div class="round-results">
+                `;
+
+                roundRankings.forEach((player, index) => {
+                    const roundPoints = player.currentGuess.accuracy;
+                    const totalPoints = player.score + roundPoints; // Add current round points
+                    
+                    resultsHTML += `
                         <div class="player-result ${index === 0 ? 'best-guess' : ''}">
                             <span class="player-name">${player.name}</span>
-                            <span>Rank Guess: ${player.currentGuess.rankGuess}</span>
                             <span>Players Guess: ${player.currentGuess.playersGuess.toLocaleString()}</span>
-                            <span>Points: +${Math.round(player.currentGuess.accuracy)}</span>
+                            <div class="points-section">
+                                <span class="round-points">Round Points: ${roundPoints}</span>
+                                <span class="total-points">Total Points: ${totalPoints}</span>
+                            </div>
                         </div>
-                    `).join('')}
-                </div>
-                ${currentRound < 5 ? '<button id="next-round-button" onclick="startNextRound()" class="next-round-button">Next Round</button>' : ''}
-            `;
+                    `;
+                });
+
+                if (currentRound < 5) {
+                    resultsHTML += `
+                        <button id="next-round-button" onclick="startNextRound()" class="next-round-button">
+                            Next Round
+                        </button>
+                    `;
+                }
+                
+                resultDiv.innerHTML = resultsHTML;
+            } else {
+                const roundRankings = [...players]
+                    .sort((a, b) => b.currentGuess.accuracy - a.currentGuess.accuracy);
+                
+                let resultsHTML = `
+                    <h3>Round ${currentRound} Results</h3>
+                    <p>Game: ${currentGame.game.name}</p>
+                    <p>Active Players: ${currentGame.game.players.toLocaleString()}</p>
+                    <div class="round-results">
+                `;
+
+                roundRankings.forEach((player, index) => {
+                    const roundPoints = player.currentGuess.accuracy;
+                    const totalPoints = player.score + roundPoints; // Add current round points
+                    const hasBonus = player.currentGuess.accuracy > player.currentGuess.hlPoints;
+                    
+                    resultsHTML += `
+                        <div class="player-result ${index === 0 ? 'best-guess' : ''}">
+                            <span class="player-name">${player.name}</span>
+                            <div class="guess-details">
+                                <span>Higher/Lower: ${player.currentGuess.higherLower} 
+                                    ${player.currentGuess.hlPoints > 0 ? '<span class="bonus-points">(+5 pts)</span>' : '(0 pts)'}
+                                </span>
+                                <span>Players Guess: ${player.currentGuess.playersGuess.toLocaleString()}</span>
+                                ${hasBonus ? '<span class="bonus-points">Closest Guess! (+5 pts)</span>' : ''}
+                            </div>
+                            <div class="points-section">
+                                <span class="round-points">Round Points: ${roundPoints}</span>
+                                <span class="total-points">Total Points: ${totalPoints}</span>
+                            </div>
+                        </div>
+                    `;
+                });
+
+                if (currentRound < 5) {
+                    resultsHTML += `
+                        <button id="next-round-button" onclick="startNextRound()" class="next-round-button">
+                            Next Round
+                        </button>
+                    `;
+                }
+                
+                resultDiv.innerHTML = resultsHTML;
+            }
             
             // Update scores
             players.forEach(player => {
                 player.score += Math.round(player.currentGuess.accuracy);
-                player.totalAccuracy += player.currentGuess.accuracy;
                 player.gamesPlayed += 1;
             });
             
             updateScoreboard();
             
-            // Check if game is over
-            if (currentRound > 5) {
-                setTimeout(endGame, 3000);
+            if (currentRound >= 5) {
+                endGame();
             }
         }
 
         function startNextRound() {
             const resultDiv = document.getElementById('previous-result');
             resultDiv.style.display = 'none';
+            
+            // Store the current game's info before loading new game
+            previousGame = currentGame;
+            previousGamePlayers = currentGame.game.players;
+            
+            // Sort players by their accuracy in the previous round
+            players.sort((a, b) => b.currentGuess.accuracy - a.currentGuess.accuracy);
+            
+            // Reset for new round
             currentPlayerIndex = 0;
             currentRound++;
+            resetGuessInputs();
             loadNewGame();
+            
+            console.log('Starting round', currentRound, 'with player order:', 
+                players.map(p => `${p.name} (${p.currentGuess.accuracy}pts)`));
         }
 
         function endGame() {
-            const winner = players.reduce((prev, current) => 
-                (current.score > prev.score) ? current : prev
-            );
+            canGuess = false;
             
-            document.getElementById('game-screen').innerHTML = `
-                <h2>Game Over!</h2>
-                <h3>Winner: ${winner.name}</h3>
-                <div class="final-scores">
-                    ${players.map(player => `
-                        <div class="final-score">
-                            <span class="player-name">${player.name}</span>
-                            <span class="score">Score: ${player.score}</span>
-                            <span class="accuracy">
-                                Accuracy: ${(player.totalAccuracy / player.gamesPlayed).toFixed(1)}%
-                            </span>
-                        </div>
-                    `).join('')}
-                </div>
-                <button onclick="location.reload()">Play Again</button>
-            `;
+            // Sort players by final score
+            const sortedPlayers = [...players].sort((a, b) => b.score - a.score);
+            const winner = sortedPlayers[0];
+            
+            // Show winner banner
+            const winnerBanner = document.getElementById('winner-banner');
+            const winnerName = document.getElementById('winner-name');
+            const winnerScore = document.getElementById('winner-score');
+            
+            winnerName.textContent = winner.name;
+            winnerScore.textContent = winner.score;
+            winnerBanner.style.display = 'block';
+            
+            // Hide game elements that are no longer needed
+            document.getElementById('first-round-input').style.display = 'none';
+            document.getElementById('higher-lower-input').style.display = 'none';
+            
+            // Keep the scoreboard visible
+            updateScoreboard();
         }
 
         function addPlayer() {
@@ -409,7 +560,7 @@
             newPlayerDiv.innerHTML = `
                 <div class="player-input-group">
                     <input type="text" placeholder="Player ${playerCount + 1} name" class="player-name">
-                    <button class="remove-player" onclick="removePlayer(this)">×</button>
+                    <button class="remove-player" onclick="removePlayer(this)">��</button>
                 </div>
             `;
             
@@ -446,6 +597,85 @@
             startButton.disabled = validPlayers.length < 2;
             startButton.title = validPlayers.length < 2 ? 
                 'Need at least 2 players to start' : 'Start the game';
+        }
+
+        function makeGuess() {
+            if (!canGuess) return;
+            
+            const playersGuess = parseInt(document.getElementById('players-guess').value);
+            if (isNaN(playersGuess) || playersGuess < 0) {
+                alert('Please enter a valid player count!');
+                return;
+            }
+            
+            const currentPlayer = players[currentPlayerIndex];
+            const actualPlayers = currentGame.game.players;
+            
+            currentPlayer.currentGuess = {
+                playersGuess,
+                accuracy: 0,
+                difference: Math.abs(playersGuess - actualPlayers)
+            };
+            
+            currentPlayerIndex++;
+            if (currentPlayerIndex >= players.length) {
+                // Calculate points after all players have guessed
+                const sortedPlayers = [...players].sort((a, b) => 
+                    a.currentGuess.difference - b.currentGuess.difference
+                );
+                
+                sortedPlayers.forEach((player, index) => {
+                    if (players.length === 2) {
+                        player.currentGuess.accuracy = index === 0 ? 5 : 0;
+                    } else if (players.length === 3) {
+                        player.currentGuess.accuracy = index === 0 ? 10 : index === 1 ? 5 : 0;
+                    } else if (players.length === 4) {
+                        player.currentGuess.accuracy = index === 0 ? 15 : index === 1 ? 10 : index === 2 ? 5 : 0;
+                    } else if (players.length === 5) {
+                        player.currentGuess.accuracy = index === 0 ? 20 : index === 1 ? 15 : index === 2 ? 10 : index === 3 ? 5 : 0;
+                    }
+                });
+                
+                showRoundResults();
+            } else {
+                document.getElementById('players-guess').value = '';
+                updateGameDisplay();
+                updateCurrentRoundGuesses();
+            }
+        }
+
+        function updateCurrentRoundGuesses() {
+            const resultDiv = document.getElementById('previous-result');
+            resultDiv.style.display = 'block';
+            
+            let guessesHTML = `
+                <h3>Current Round Guesses</h3>
+                <div class="round-results">
+            `;
+            
+            // Show guesses for players who have already gone
+            for (let i = 0; i < currentPlayerIndex; i++) {
+                const player = players[i];
+                if (currentRound === 1) {
+                    guessesHTML += `
+                        <div class="player-result">
+                            <span class="player-name">${player.name}</span>
+                            <span>Players Guess: ${player.currentGuess.playersGuess.toLocaleString()}</span>
+                        </div>
+                    `;
+                } else {
+                    guessesHTML += `
+                        <div class="player-result">
+                            <span class="player-name">${player.name}</span>
+                            <span>Higher/Lower: ${player.currentGuess.higherLower}</span>
+                            <span>Players Guess: ${player.currentGuess.playersGuess.toLocaleString()}</span>
+                        </div>
+                    `;
+                }
+            }
+            
+            guessesHTML += `</div>`;
+            resultDiv.innerHTML = guessesHTML;
         }
     </script>
 </body>
